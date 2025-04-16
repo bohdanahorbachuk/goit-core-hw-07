@@ -24,10 +24,9 @@ class Phone(Field):
 
 class Birthday(Field):
     def __init__(self, value):
-        try:
-            self.value = datetime.strptime(value, "%d.%m.%Y")
-        except ValueError:
-            raise ValueError("Invalid date format. Use DD.MM.YYYY")
+        if not re.match(r"\d{2}.\d{2}.\d{4}", value):
+            raise ValueError("Невірний формат дати. Використовуйте DD.MM.YYYY")
+        super().__init__(value)
 
 
 class Record:
@@ -64,7 +63,7 @@ class Record:
 
     def __str__(self):
         phones = "; ".join(str(p) for p in self.phones)
-        birthday = f", birthday: {self.birthday.value.strftime('%d.%m.%Y')}" if self.birthday else ""
+        birthday = f", birthday: {self.birthday.value}" if self.birthday else ""
         return f"Contact name: {self.name.value}, phones: {phones}{birthday}"
 
 
@@ -73,7 +72,7 @@ class AddressBook(UserDict):
         self.data[record.name.value] = record
 
     def find(self, name):
-        return self.data.get(name)
+        return self.data.get(name.lower())
 
     def delete(self, name):
         if name in self.data:
@@ -84,7 +83,7 @@ class AddressBook(UserDict):
         upcoming = []
         for record in self.data.values():
             if record.birthday:
-                bday_this_year = record.birthday.value.replace(year=today.year).date()
+                bday_this_year = datetime.strptime(record.birthday.value, "%d.%m.%Y").replace(year=today.year).date()
                 if today <= bday_this_year <= today + timedelta(days=7):
                     if bday_this_year.weekday() >= 5:
                         bday_this_year += timedelta(days=(7 - bday_this_year.weekday()))
@@ -110,6 +109,8 @@ def parse_input(user_input):
 
 @input_error
 def add_contact(args, book):
+    if not args:
+        return "Error: Name and phone number are required."
     name, phone = args.split()
     record = book.find(name)
     message = "Contact updated."
@@ -123,6 +124,8 @@ def add_contact(args, book):
 
 @input_error
 def change_contact(args, book):
+    if not args:
+        return "Error: Name and phone numbers are required."
     name, old_phone, new_phone = args.split()
     record = book.find(name)
     if not record:
@@ -142,6 +145,8 @@ def show_phones(args, book):
 
 @input_error
 def add_birthday(args, book):
+    if not args:
+        return "Error: Name and birthday date are required."
     name, date_str = args.split()
     record = book.find(name)
     if not record:
@@ -156,7 +161,7 @@ def show_birthday(args, book):
     record = book.find(name)
     if not record or not record.birthday:
         raise ValueError("Birthday not found.")
-    return record.birthday.value.strftime("%d.%m.%Y")
+    return record.birthday.value
 
 
 @input_error
@@ -178,7 +183,7 @@ def main():
     print("Welcome to the assistant bot!")
 
     while True:
-        user_input = input("Enter a command: ")
+        user_input = input("Enter a command: ").strip().lower()
         command, *rest = parse_input(user_input)
         args = rest[0] if rest else ""
 
