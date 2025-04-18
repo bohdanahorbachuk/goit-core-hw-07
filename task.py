@@ -1,6 +1,8 @@
 from collections import UserDict
 from datetime import datetime, timedelta
 import re
+import pickle
+import os
 
 
 class Field:
@@ -170,8 +172,20 @@ def parse_input(user_input):
     return user_input.strip().split(maxsplit=1)
 
 
+def save_book(book, filename="addressbook.bin"):
+    with open(filename, "wb") as f:
+        pickle.dump(book, f)
+
+
+def load_book(filename="addressbook.bin"):
+    if os.path.exists(filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+    return AddressBook()
+
+
 def main():
-    book = AddressBook()
+    book = load_book()
     print("Welcome to the assistant bot!")
 
     while True:
@@ -180,10 +194,12 @@ def main():
             continue
 
         command, *rest = parse_input(user_input)
+        command = command.lower()  # ✅ make case-insensitive
         args = rest[0] if rest else ""
 
         if command in ("exit", "close"):
-            print("Good bye!")
+            save_book(book)
+            print("Contacts saved. Good bye!")
             break
         elif command == "hello":
             print("How can I help you?")
